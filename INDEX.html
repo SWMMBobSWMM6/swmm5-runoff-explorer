@@ -1677,6 +1677,13 @@ function safe(fn, label) {
   try { return fn(); }
   catch(e) { console.error(`[${label}]`, e); return null; }
 }
+// Escapes untrusted strings (file names, IDs parsed out of dropped .RPT/.OUT
+// files) before they're interpolated into innerHTML, to prevent DOM-based XSS.
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, ch => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[ch]));
+}
 
 // ===================================================================
 //  TABS — with ARIA, keyboard navigation, and URL hash sync
@@ -2968,15 +2975,15 @@ function displayOUT(fname) {
   document.getElementById('outLoaded').innerHTML = `
     <span style="font-size:1.2rem;">✅</span>
     <div>
-      <div class="rpt-fname" style="color:#c084fc;">${fname}</div>
+      <div class="rpt-fname" style="color:#c084fc;">${escapeHtml(fname)}</div>
       <div class="rpt-info">SWMM5 v${o.version} · ${FLOW_UNITS[o.flowUnits]||'?'} · ${o.nPeriods} periods · ${o.reportStep}s steps · ${o.nSub} subcatch / ${o.nNode} nodes / ${o.nLink} links · ${(o.fileSize/1024).toFixed(1)} KB</div>
     </div>`;
 
   // Populate subcatchment dropdown
   const subSel = document.getElementById('outSubID');
-  subSel.innerHTML = o.subIDs.map((s,i)=>`<option value="${i}">${s}</option>`).join('');
+  subSel.innerHTML = o.subIDs.map((s,i)=>`<option value="${i}">${escapeHtml(s)}</option>`).join('');
   const linkSel = document.getElementById('outLinkID');
-  linkSel.innerHTML = o.linkIDs.map((s,i)=>`<option value="${i}">${s}</option>`).join('');
+  linkSel.innerHTML = o.linkIDs.map((s,i)=>`<option value="${i}">${escapeHtml(s)}</option>`).join('');
 
   drawOutChart();
 }
@@ -3351,8 +3358,8 @@ function displayRPTComparison(fname) {
   document.getElementById('rptLoaded').innerHTML = `
     <span style="font-size:1.2rem;">✅</span>
     <div>
-      <div class="rpt-fname">${fname}</div>
-      <div class="rpt-info">${subNames.length} subcatchment(s) found: ${subNames.join(', ') || 'none'}</div>
+      <div class="rpt-fname">${escapeHtml(fname)}</div>
+      <div class="rpt-info">${subNames.length} subcatchment(s) found: ${subNames.map(escapeHtml).join(', ') || 'none'}</div>
     </div>`;
 
   if(!sub) {
